@@ -858,6 +858,7 @@ export const characters: Character[] = [
     talent: {
       name: '天賦',
       description: '自身を除く味方全体の速度+10%。',
+      targetType: 'single', // Added to satisfy Action interface
       effects: [
         { id: 'ruan_mei_talent_spd', source: '天賦', target: 'ALLIES', type: 'STAT_MOD', value: { '速度%': 10 }, duration: Infinity }
       ]

@@ -93,7 +93,7 @@ export interface RelicSetEffect {
 
 // --- Generic Effect System for Combat Simulation ---
 
-export type EffectTarget = 'SELF' | 'ALLIES' | 'ENEMIES';
+export type EffectTarget = 'SELF' | 'ALLIES' | 'ENEMIES' | 'LOWEST_SHIELD_ALLY';
 
 export type EffectType =
   | 'STAT_MOD'        // ステータス修飾 (ATK%, CRIT Rate, etc.)
