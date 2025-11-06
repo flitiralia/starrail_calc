@@ -1,4 +1,4 @@
-import type { Effect } from './relics';
+import type { Effect, ScalingComponent } from './relics';
 
 export interface TraceTalent {
   id: string;
@@ -19,12 +19,6 @@ export interface CharacterTraces {
   // 全開放時の合計ステータスボーナス
   totalStats: { [key: string]: number };
   talents: TraceTalent[];
-}
-
-export interface ScalingComponent {
-  stat: 'atk' | 'hp' | 'def' | 'lostHp' | 'icarunTotalHealing' | 'comradeAtk'; // Add 'comradeAtk'
-  multiplier: number; // %
-  flat?: number;
 }
 
 export interface Action {
@@ -70,6 +64,7 @@ export interface Character {
   isTargetableSpirit?: boolean; // For spirits like Icarun that have HP and can be targeted.
   isUntargetableSpirit?: boolean; // For spirits like Dragon Spirit that are untargetable gimmicks.
   summonedSpiritId?: string; // Links summoner to spirit.
+  summonerId?: string; // Links spirit to summoner.
   technique?: Action;
   talent?: Action;
 }
@@ -915,7 +910,7 @@ export const characters: Character[] = [
             source: '屹立',
             target: 'LOWEST_SHIELD_ALLY',
             type: 'ADDITIONAL_SHIELD',
-            scaling: [{ stat: 'atk', multiplier: 5, flat: 100 }],
+            scaling: [{ stat: 'atk', multiplier: 5, flat: 100 }], // Changed from dotScaling
             duration: 3
           }]
         }

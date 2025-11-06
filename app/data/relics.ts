@@ -91,6 +91,14 @@ export interface RelicSetEffect {
   effects?: Effect[];
 }
 
+// --- Generic Scaling Component for Actions/Effects ---
+
+export interface ScalingComponent {
+  stat: 'atk' | 'hp' | 'def' | 'lostHp' | 'comradeAtk' | 'icarunTotalHealing';
+  multiplier: number;
+  flat?: number;
+}
+
 // --- Generic Effect System for Combat Simulation ---
 
 export type EffectTarget = 'SELF' | 'ALLIES' | 'ENEMIES' | 'LOWEST_SHIELD_ALLY';
@@ -103,7 +111,8 @@ export type EffectType =
   | 'HEAL_BOOST'      // 治癒量アップ
   | 'DMG_TAKEN_INCREASE' // 被ダメージアップ
   | 'BREAK_EFFICIENCY_BOOST' // 弱点撃破効率アップ
-  | 'SPECIAL_EFFECT'; // EP回復、行動順加速など、シミュレーションロジックで特別な処理が必要な効果
+  | 'SPECIAL_EFFECT' // EP回復、行動順加速など、シミュレーションロジックで特別な処理が必要な効果
+  | 'ADDITIONAL_SHIELD'; // 追加バリア（丹恒・騰荒の軌跡「屹立」など）
 
 export type ActionType = 'ALL' | 'BASIC' | 'SKILL' | 'ULTIMATE' | 'FOLLOW_UP' | 'DOT';
 
@@ -124,7 +133,7 @@ export interface Effect {
   // For STAT_MOD, the key is the stat name (e.g., '攻撃力%')
   // For DMG_BOOST, the key is the action type (e.g., 'ALL', 'ULTIMATE')
   // For others, it might be a generic key like 'value'
-  value: number | { [key: string]: number };
+  value?: number | { [key: string]: number };
   duration?: number; // in turns
   maxStacks?: number;
   currentStacks?: number;
@@ -134,10 +143,10 @@ export interface Effect {
   // Is this effect togglable by the user in the UI?
   isToggleable?: boolean;
   defaultOn?: boolean;
-  dotScaling?: {
-    stat: 'atk';
-    multiplier: number;
-  };
+  // For effects that require dynamic calculation based on stats (e.g., shields, DoTs)
+  scaling?: {
+    stat: 'atk' | 'hp' | 'def'; multiplier: number; flat?: number;
+  }[]; // Note: This could also use ScalingComponent, but keeping it simple for now.
 }
 
 export interface RelicSet {
