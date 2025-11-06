@@ -1,4 +1,4 @@
-import type { Effect, ScalingComponent } from './relics';
+import type { Effect, ScalingComponent } from './relics'; export type { ScalingComponent };
 
 export interface TraceTalent {
   id: string;

@@ -431,7 +431,7 @@ export default function Home() {
     const charLevel = 80; // Assuming character level 80 for now
 
     // --- Gather all active effects ---
-    let totalDmgBoost = { 'ALL': 0, 'BASIC': 0, 'SKILL': 0, 'ULTIMATE': 0, 'FOLLOW_UP': 0 };
+    let totalDmgBoost: { [key in relics.ActionType]?: number } = { 'ALL': 0, 'BASIC': 0, 'SKILL': 0, 'ULTIMATE': 0, 'FOLLOW_UP': 0, 'DOT': 0 };
     let finalCritRate = finalStats.total.critRate;
 
     // --- 軌跡、星魂などからすべてのアクティブな効果を収集 ---
@@ -478,7 +478,7 @@ export default function Home() {
             case 'DMG_BOOST':
               for (const key in effect.value) {
                 if (key in totalDmgBoost) {
-                  totalDmgBoost[key as relics.ActionType] += effect.value[key];
+                  totalDmgBoost[key as relics.ActionType] = (totalDmgBoost[key as relics.ActionType] ?? 0) + effect.value[key];
                 }
               }
               break;
@@ -516,7 +516,7 @@ export default function Home() {
     }
 
     // 与ダメージバフを適用
-    const actionDmgBoost = totalDmgBoost['ALL'] + (totalDmgBoost[actionType.toUpperCase() as relics.ActionType] ?? 0);
+    const actionDmgBoost = (totalDmgBoost['ALL'] || 0) + (totalDmgBoost[actionType.toUpperCase() as relics.ActionType] ?? 0);
     const mainBoostedDmg = mainTargetBaseDmg * (1 + actionDmgBoost / 100);
     const adjacentBoostedDmg = adjacentTargetBaseDmg * (1 + actionDmgBoost / 100);
 
@@ -572,9 +572,9 @@ export default function Home() {
       const charData = actor.data;
       if (!charData || !actor.currentStats) return 0;
       const { atk, hp, critDmg } = actor.currentStats.total;
-      const charLevel = 80;
+      const charLevel = 80; // Assuming character level 80 for now
 
-      let totalDmgBoost = { 'ALL': 0, 'BASIC': 0, 'SKILL': 0, 'ULTIMATE': 0, 'FOLLOW_UP': 0 };
+      let totalDmgBoost: { [key in relics.ActionType]?: number } = { 'ALL': 0, 'BASIC': 0, 'SKILL': 0, 'ULTIMATE': 0, 'FOLLOW_UP': 0, 'DOT': 0 };
       let finalCritRate = actor.currentStats.total.critRate;
       let totalResPen = 0;
     let totalDefShred = 0;
@@ -592,7 +592,7 @@ export default function Home() {
       // 今日も平和な一日
       const peacefulDayEffect = allEffects.find(e => e.id.startsWith('peaceful_day_'));
       if (peacefulDayEffect && typeof peacefulDayEffect.value === 'object' && 'ALL' in peacefulDayEffect.value) {
-        totalDmgBoost['ALL'] += (peacefulDayEffect.value['ALL'] ?? 0) * (actor.data.maxEp ?? 0);
+        totalDmgBoost['ALL'] = (totalDmgBoost['ALL'] ?? 0) + (peacefulDayEffect.value['ALL'] ?? 0) * (actor.data.maxEp ?? 0);
       }
 
       // 遺物セット効果
@@ -640,25 +640,26 @@ export default function Home() {
             for (const key in effect.value) {
               if (key in totalDmgBoost) {
                 const valuePerStack = effect.value[key];
-                totalDmgBoost[key as relics.ActionType] += valuePerStack * stacks;
+                totalDmgBoost[key as relics.ActionType] = (totalDmgBoost[key as relics.ActionType] ?? 0) + valuePerStack * stacks;
               }
             }
           } else if (effect.type === 'DEF_SHRED') {
             if (effect.id === 'prisoner_def_shred') {
               // 深い牢獄の囚人
               const dotCount = simulationState.enemyDebuffs.filter(d =>
-                ['裂創', '燃焼', '感電', '風化'].some(dot => d.id.includes(dot)) || d.dotScaling
+                ['裂創', '燃焼', '感電', '風化'].some(dot => d.id.includes(dot)) || d.scaling
               ).length;
               const stacks = Math.min(3, dotCount);
-              totalDefShred += (effect.value as number) * stacks;
+              totalDefShred += (effect.value['DEF_SHRED'] ?? 0) * stacks;
             } else {
               // 星の如く輝く天才など
-              totalDefShred += effect.value as number;
+              totalDefShred += effect.value['DEF_SHRED'] ?? 0;
             }
           } else if (effect.id === 'arena_dmg_boost') {
             // 星々の競技場
             if (finalCritRate >= 70) {
-              if (actionKey === 'basic' || actionKey === 'skill') totalDmgBoost['ALL'] += effect.value as number;
+              if (actionKey === 'basic') totalDmgBoost['BASIC'] = (totalDmgBoost['BASIC'] ?? 0) + (effect.value['BASIC'] ?? 0);
+              if (actionKey === 'skill') totalDmgBoost['SKILL'] = (totalDmgBoost['SKILL'] ?? 0) + (effect.value['SKILL'] ?? 0);
             }
           }
         } else if (typeof effect.value === 'number') {
@@ -707,7 +708,7 @@ export default function Home() {
 
       const actionDmgBoost = actionKey === 'additional'
         ? totalDmgBoost['ALL'] // 付加ダメージは与ダメージバフのみ適用
-        : totalDmgBoost['ALL'] + (totalDmgBoost[actionKey.toUpperCase() as relics.ActionType] ?? 0);
+        : (totalDmgBoost['ALL'] ?? 0) + (totalDmgBoost[actionKey.toUpperCase() as relics.ActionType] ?? 0);
 
       // 属性与ダメージを追加
       // @ts-ignore
@@ -1453,13 +1454,13 @@ export default function Home() {
     };
 
     const calculateSkillDotDamage = (sourceActor: SimulationActor, debuff: relics.Effect, enemyDebuffs: relics.Effect[]) => {
-      if (!debuff.dotScaling) return 0;
+      if (!debuff.scaling || debuff.scaling.length === 0) return 0;
 
       const charLevel = 80;
       const { atk } = sourceActor.currentStats.total;
 
       // 1. ダメージ基礎値
-      const baseDotDamage = atk * (debuff.dotScaling.multiplier / 100);
+      const baseDotDamage = atk * (debuff.scaling[0].multiplier / 100);
 
       // 2. 各種係数の計算
       let totalDmgBoost = 0;
@@ -2210,7 +2211,7 @@ export default function Home() {
             // 他の味方の回復 (清めし塵の身)
             const traceScaling = luochaActor.data.actions?.follow_up?.healScaling?.adjacent?.[0];
             if (traceScaling) {
-        const otherHealAmount = calculateHealAmount(luochaActor, traceScaling); // This is a typo, should be otherHealAmount
+              const otherHealAmount = calculateHealAmount(luochaActor, traceScaling);
               currentParty.forEach(ally => {
                 if (ally && ally.index !== originalActor.index && !ally.data.isTargetableSpirit && !ally.data.isUntargetableSpirit) {
                   applyHeal(luochaActor, ally, otherHealAmount, '清めし塵の身', currentParty);
