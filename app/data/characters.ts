@@ -49,7 +49,7 @@ export interface Action {
   isSpiritSkill?: boolean; // New flag for spirit skills
 }
 
-export type ActionTypeKey = 'basic' | 'skill' | 'ultimate' | 'follow_up' | 'enhanced_basic' | 'spirit_skill' | 'enhanced_spirit_skill'; // Modified
+export type ActionTypeKey = 'basic' | 'skill' | 'ultimate' | 'follow_up' | 'enhanced_basic' | 'spirit_skill' | 'enhanced_spirit_skill' | 'spirit_talent'; // Modified
 
 export interface Character {
   id: string;
