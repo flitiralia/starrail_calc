@@ -584,6 +584,7 @@ export default function Home() {
       // 完全なパーティーシミュレーションでは、味方からのバフもチェックします。
       const allEffects: relics.Effect[] = [];
       charData.traces?.talents.forEach((t: any) => { if (t.effects) allEffects.push(...t.effects); });
+      charData.traces?.talents.forEach((t: { effects?: relics.Effect[] }) => { if (t.effects) allEffects.push(...t.effects); });
       charData.eidolons?.forEach((e: any) => { if (e.level <= eidolonLevel && e.effects) allEffects.push(...e.effects); });
       // この部分はまだアクティブなキャラクターの光円錐を使用しており、一般化する必要があります。
       const lcEffect = lightCones.find(lc => lc.id === charData.lightConeId)?.effects[charData.lightConeRank - 1];
@@ -741,7 +742,7 @@ export default function Home() {
       if (spAfterGain >= 4) {
         const archerActor = partyActors.find(p => p?.data.id === 'archer');
         if (archerActor) {
-          const buffEffect = archerActor.data.traces?.talents.find(t => t.id === 'archer-talent3')?.effects?.[0];
+          const buffEffect = archerActor.data.traces?.talents.find((t: { id: string }) => t.id === 'archer-talent3')?.effects?.[0];
           if (buffEffect) {
             const existingBuff = archerActor.selfBuffs.find(b => b.id === buffEffect.id);
             if (existingBuff) existingBuff.duration = buffEffect.duration; // Refresh duration
@@ -795,13 +796,13 @@ export default function Home() {
               }
             });
 
-            const existingBuff = (effect.target === 'ALLIES' ? simulationState.partyBuffs : actor.selfBuffs).find(b => b.id === effect.id);
+            const existingBuff = (effect.target === 'ALLIES' ? simulationState.partyBuffs : actor.selfBuffs).find((b: relics.Effect) => b.id === effect.id);
             if (isConditionMet && !existingBuff) {
               if (effect.target === 'ALLIES') simulationState.partyBuffs.push({ ...effect, sourceActorIndex: actor.index });
               else actor.selfBuffs.push({ ...effect, sourceActorIndex: actor.index });
             } else if (!isConditionMet && existingBuff) {
               if (effect.target === 'ALLIES') simulationState.partyBuffs = simulationState.partyBuffs.filter(b => b.id !== effect.id);
-              else actor.selfBuffs = actor.selfBuffs.filter(b => b.id !== effect.id);
+              else actor.selfBuffs = actor.selfBuffs.filter((b: relics.Effect) => b.id !== effect.id);
             }
           }
         });
@@ -835,13 +836,13 @@ export default function Home() {
           if (hanyaActor) {
             const spdBoostValue = hanyaActor.currentStats.total.spd * 0.20; // 速度は常に現在の値から計算
             const dynamicBuff: relics.Effect = { id: 'hanya-ult-spd-boost-applied', source: '必殺技 (速度適用値)', target: 'SELF', type: 'STAT_MOD', value: { '速度': spdBoostValue }, duration: hanyaUltSpdBoostEffect.duration, sourceActorIndex: hanyaActor.index };
-            const existingBuffIndex = actor.selfBuffs.findIndex(b => b.id === dynamicBuff.id);
+            const existingBuffIndex = actor.selfBuffs.findIndex((b: relics.Effect) => b.id === dynamicBuff.id);
             if (existingBuffIndex === -1) actor.selfBuffs.push(dynamicBuff);
             else actor.selfBuffs[existingBuffIndex] = dynamicBuff;
           }
         } else {
           // バフがなくなった場合、適用されていた動的バフも削除
-          actor.selfBuffs = actor.selfBuffs.filter(b => b.id !== 'hanya-ult-spd-boost-applied');
+          actor.selfBuffs = actor.selfBuffs.filter((b:relics.Effect) => b.id !== 'hanya-ult-spd-boost-applied');
         }
 
         // 1b. トリビーのHPバフ (結界中)
@@ -856,7 +857,7 @@ export default function Home() {
             if (grandViewTrace) {
               const atkBoostValue = dhthActor.currentStats.total.atk * 0.15;
               const grandViewBuff: relics.Effect = { id: 'dhth-grand-view-atk-buff-applied', source: '偉観', target: 'SELF', type: 'STAT_MOD', value: { '攻撃力': atkBoostValue }, duration: Infinity, sourceActorIndex: dhthActor.index };
-              const existingBuffIndex = actor.selfBuffs.findIndex(b => b.id === grandViewBuff.id);
+              const existingBuffIndex = actor.selfBuffs.findIndex((b:relics.Effect) => b.id === grandViewBuff.id);
               if (existingBuffIndex === -1) actor.selfBuffs.push(grandViewBuff);
               else actor.selfBuffs[existingBuffIndex] = grandViewBuff; // 毎ティック更新
             }
@@ -870,7 +871,7 @@ export default function Home() {
             const lcRank = partySlots[equipper.index]?.lightConeRank ?? 1;
             const lcData = lightCones.find(lc => lc.id === 'planetary_rendezvous');
             const planetaryBuff = lcData?.effects[lcRank - 1].effects?.[0];
-            if (planetaryBuff && !actor.selfBuffs.some(b => b.id === planetaryBuff.id && b.sourceActorIndex === equipper.index)) {
+            if (planetaryBuff && !actor.selfBuffs.some((b:relics.Effect) => b.id === planetaryBuff.id && b.sourceActorIndex === equipper.index)) {
               // このバフは永続なので、selfBuffsに追加する
               actor.selfBuffs.push({ ...planetaryBuff, sourceActorIndex: equipper.index });
             }
@@ -878,7 +879,7 @@ export default function Home() {
         });
 
         // 今が丁度
-        const perfectTimingLcEffect = actor.selfBuffs.find(b => b.id.startsWith('timing_s'));
+        const perfectTimingLcEffect = actor.selfBuffs.find((b:relics.Effect) => b.id.startsWith('timing_s'));
         if (perfectTimingLcEffect) {
           const lcRank = partySlots[actor.index]?.lightConeRank ?? 1;
           const lcData = lightCones.find(lc => lc.id === 'perfect_timing');
@@ -890,7 +891,7 @@ export default function Home() {
             const cap = capMatch ? parseInt(capMatch[1], 10) : 15;
             const healBoostFromRes = Math.min(cap, actor.currentStats.total.effectRes * (ratio / 100));
             const dynamicHealBuff: relics.Effect = { id: 'timing_heal_boost_applied', source: '屈折する視線 (適用値)', target: 'SELF', type: 'HEAL_BOOST', value: healBoostFromRes, duration: Infinity, sourceActorIndex: actor.index };
-            const existingBuffIndex = actor.selfBuffs.findIndex(b => b.id === dynamicHealBuff.id);
+            const existingBuffIndex = actor.selfBuffs.findIndex((b:relics.Effect) => b.id === dynamicHealBuff.id);
             if (existingBuffIndex === -1) actor.selfBuffs.push(dynamicHealBuff);
             else actor.selfBuffs[existingBuffIndex] = dynamicHealBuff;
           }
@@ -1101,7 +1102,6 @@ export default function Home() {
         isBroken: false,
         hasPlumBlossom: false,
       },
-      ruanMeiField: { active: false, duration: 0, sourceActorIndex: -1 },
       toribiiTalentUses: {} as Record<number, boolean>,
       toribiiField: { active: false, duration: 0, sourceActorIndex: -1 },
       enemyDebuffs: [] as relics.Effect[],
@@ -1143,7 +1143,13 @@ export default function Home() {
         name: charData.name,
         data: charData,
         stats: charFinalStats,
-        actionValue: 0, // Initialize action value
+        charge: (() => {
+          // アーチャーの開始チャージ天賦を適用
+          if (charData.id === 'archer') return 1; // 正義の味方
+          return 0;
+        })(),
+        // キャラクター固有の状態
+        currentHp: charFinalStats.total.hp,
         baseAV: baseAV,
         currentStats: JSON.parse(JSON.stringify(charFinalStats)),
         currentEp: (() => {
@@ -1153,19 +1159,12 @@ export default function Home() {
           if (charData.id === 'toribii') initialEp += 30;
           return initialEp * (1 + (charFinalStats.total.epRegenRate / 100));
         })(),
-        charge: (() => {
-          // アーチャーの開始チャージ天賦を適用
-          if (charData.id === 'archer') return 1; // 正義の味方
-          return 0;
-        })(),
-        // キャラクター固有の状態
-        currentHp: charFinalStats.total.hp,
         isDown: false,
         lostHp: 0,
         actionValue: (() => {
           // 百花の行動順短縮
           if (charData.id === 'dan_heng_teng_huang') {
-            const hundredFlowersEffect = charData.traces.talents.find(t => t.id === 'dhth-trace-hundred-flowers')?.effects?.[0];
+            const hundredFlowersEffect = charData.traces?.talents.find(t => t.id === 'dhth-trace-hundred-flowers')?.effects?.[0];
             if (hundredFlowersEffect && typeof hundredFlowersEffect.value === 'object' && 'initialAvAdvance' in hundredFlowersEffect.value) {
               return (hundredFlowersEffect.value.initialAvAdvance ?? 0) * 100;
             }
@@ -1180,11 +1179,6 @@ export default function Home() {
           return 0;
         })(),
         hellscapeTurns: 0,
-        selfBuffs: (() => {
-          const buffs: relics.Effect[] = [];
-          // 亡国の悲哀を詠う詩人
-          return buffs;
-        })(),
         autoSkillCooldown: charData.id === 'luocha' ? 2 : 0,
         selfBuffs: [] as relics.Effect[],
         rotationIndex: 0,
@@ -1322,7 +1316,7 @@ export default function Home() {
           actionLog[actionLog.length - 1].charge = actor.charge;
         }
         if (actor.data.id === 'toribii') {
-          technique.effects?.forEach(effect => {
+          technique.effects?.forEach((effect: relics.Effect) => {
             if (effect.target === 'ALLIES') {
               // バフが既に存在するか確認し、存在する場合は持続時間を更新、そうでなければ追加します。
               const existingBuffIndex = simulationState.partyBuffs.findIndex(b => b.id === effect.id);
@@ -1368,7 +1362,7 @@ export default function Home() {
             summonDragonSpirit(actor);
           }
           // TODO: Add auto-skill logic at start of battle
-          actionLog.push({ name: actor.name, currentTime: 0, action: `同袍付与 (秘技) -> ${partyActors.find(p => p.index === comradeTarget)?.name}`, sp: currentSp, activeEffects: [], charge: actor.charge, hp: actor.currentHp, maxHp: actor.currentStats.total.hp });
+          actionLog.push({ name: actor.name, currentTime: 0, action: `同袍付与 (秘技) -> ${(comradeTarget)?.name}`, sp: currentSp, activeEffects: [], charge: actor.charge, hp: actor.currentHp, maxHp: actor.currentStats.total.hp });
         }
       }
     });
@@ -1405,7 +1399,7 @@ export default function Home() {
         const skillScaling = luochaActor.data.actions?.skill?.healScaling?.main[0];
         const healAmount = calculateHealAmount(luochaActor, skillScaling);
         applyHeal(luochaActor, luochaActor, healAmount, '自動スキル', partyActors); // 簡略化：現時点では自己回復
-        actionLog.push({ name: luochaActor.name, currentTime: currentTimeValue, action: 'デバフ解除 (滴水蘇生)', damage: null, sp: currentSp, activeEffects: [], charge: luochaActor.charge, hp: luochaActor.currentHp });
+        actionLog.push({ name: luochaActor.name, currentTime: currentTimeValue, action: 'デバフ解除 (滴水蘇生)', sp: currentSp, activeEffects: [], charge: luochaActor.charge, hp: luochaActor.currentHp });
 
         // Gain stack only if field is not active
         if (!simulationState.luochaField.active) {
@@ -1830,8 +1824,9 @@ export default function Home() {
         // ダンス！ダンス！ダンス！
         const dddEffect = actor.selfBuffs.find(b => b.id === 'action_forward_on_ultimate');
         if (dddEffect && typeof dddEffect.value === 'number') {
+          const actionForwardValue = dddEffect.value;
           partyActors.forEach(ally => {
-            ally.actionValue += dddEffect.value * 100;
+            ally.actionValue += actionForwardValue * 100;
           });
           actionLog.push({ name: actor.name, currentTime: currentTime, action: '行動順UP (ダンス！)', sp: currentSp, activeEffects: [] });
         }
@@ -1919,7 +1914,7 @@ export default function Home() {
         // 2. 「雨上がり」状態開始ロジック (必殺技で発動)
         if (actionKey === 'ultimate') {
           simulationState.xianciRainfall = { active: true, duration: 3, sourceActorIndex: actor.index };
-          const hpBuffEffect = actor.data.actions?.ultimate?.effects?.find(e => e.id === 'xianci-ult-hp-buff');
+          const hpBuffEffect = actor.data.actions?.ultimate?.effects?.find((e: relics.Effect) => e.id === 'xianci-ult-hp-buff');
           if (hpBuffEffect) {
             simulationState.partyBuffs.push({ ...hpBuffEffect, sourceActorIndex: actor.index });
           }
@@ -1966,7 +1961,7 @@ export default function Home() {
       if (actor.data.id === 'ruan_mei' && actionKey === 'skill') {
         const skillEffects = actor.data.actions?.skill?.effects;
         if (skillEffects) {
-          skillEffects.forEach(effect => {
+          skillEffects.forEach((effect: relics.Effect) => {
             simulationState.partyBuffs.push({ ...effect, sourceActorIndex: actor.index });
           });
         }
@@ -1993,14 +1988,14 @@ export default function Home() {
           const targetActor = currentParty.find(p => p?.index === targetIndex);
           if (targetActor) {
             const ultEffects = actor.data.actions?.ultimate?.effects;
-            const spdBuff = ultEffects?.find(e => e.id === 'hanya-ult-spd-boost');
+            const spdBuff = ultEffects?.find((e: relics.Effect) => e.id === 'hanya-ult-spd-boost');
             // 尽きぬ追憶
             const endlessDmgBuff = actor.selfBuffs.find(b => b.id.startsWith('endless_') && b.id.includes('_dmg'));
             if (endlessDmgBuff) {
               simulationState.partyBuffs.push({ ...endlessDmgBuff, sourceActorIndex: actor.index });
             }
 
-            const atkBuff = ultEffects?.find(e => e.id === 'hanya-ult-atk-boost');
+            const atkBuff = ultEffects?.find((e: relics.Effect) => e.id === 'hanya-ult-atk-boost');
             const durationBonus = partySlots[actor.index].eidolonLevel >= 4 ? 1 : 0;
 
             if (spdBuff) {
@@ -2119,7 +2114,7 @@ export default function Home() {
       if (wasAttack && originalActor.index === simulationState.comradeState.targetIndex) {
         const dhthActor = currentParty.find(p => p.index === simulationState.comradeState.sourceActorIndex);
         if (dhthActor) {
-          const hundredFlowersEffect = dhthActor.data.traces.talents.find(t => t.id === 'dhth-trace-hundred-flowers')?.effects?.[0];
+          const hundredFlowersEffect = dhthActor.data.traces.talents.find((t: any) => t.id === 'dhth-trace-hundred-flowers')?.effects?.[0];
           if (hundredFlowersEffect && typeof hundredFlowersEffect.value === 'object' && 'epRecoveryOnComradeAttack' in hundredFlowersEffect.value) {            const epGain = (hundredFlowersEffect.value.epRecoveryOnComradeAttack ?? 0) * (1 + (dhthActor.currentStats.total.epRegenRate / 100));
             dhthActor.currentEp = Math.min(dhthActor.data.maxEp ?? 135, dhthActor.currentEp + epGain);
             dhthActor.currentEp = Math.min(dhthActor.data.maxEp ?? 135, dhthActor.currentEp + hundredFlowersEffect.value.epRecoveryOnComradeAttack);
@@ -2141,7 +2136,7 @@ export default function Home() {
           dragonSpiritActor.isDown = true;
           dragonSpiritActor.currentHp = 0;
           dragonSpiritActor.actionValue = Infinity; // 行動不能にする
-          actionLog.push({ name: dragonSpiritActor.name, currentTime: currentTime, action: '退場', damage: null, sp: currentSp, activeEffects: [] });
+          actionLog.push({ name: dragonSpiritActor.name, currentTime: currentTime, action: '退場', sp: currentSp, activeEffects: [] });
         }
       };
 
@@ -2278,7 +2273,7 @@ export default function Home() {
       // --- 行動後、自身に付与されるバフ ---
       // アーチャー: 回路接続
       if (originalActor.data.id === 'archer' && wasAttack && originalActor.data.actions.skill) {
-        const skillEffect = originalActor.data.actions.skill.effects?.find(e => e.id === 'archer-skill-state');
+        const skillEffect = originalActor.data.actions.skill.effects?.find((e: relics.Effect) => e.id === 'archer-skill-state');
         if (skillEffect) {
           const existingBuff = originalActor.selfBuffs.find(b => b.id === skillEffect.id);
           if (existingBuff) {
@@ -2305,7 +2300,7 @@ export default function Home() {
         processPostActionTriggers(luochaActorForField, wasAttack, hpBefore, hpAfter, updatedParty);
       }
     };
-
+    console.log("開始");
     while (currentTime <= simulationEndTime) {
       currentTime++;
 
@@ -2357,7 +2352,7 @@ export default function Home() {
           let damageDealt = 0;
 
           // DoTダメージ
-          if (debuff.dotScaling) {
+          if (debuff.scaling) {
             // スキルによるDoT
             damageDealt = calculateSkillDotDamage(sourceActor, debuff, simulationState.enemyDebuffs);
             actionLog.push({ name: '敵', currentTime: currentTime, action: `${debuff.source}ダメージ`, damageDealt: damageDealt, sp: currentSp, activeEffects: [], charge: 0, hp: 0, maxHp: 0, toughness: simulationState.enemyState.toughness, maxToughness: simulationState.enemyState.maxToughness });
@@ -2651,7 +2646,7 @@ export default function Home() {
 
       // 追加攻撃後のトリビーの自己バフをチェック
       if (actionLog[actionLog.length - 1]?.action === '天賦(追加攻撃)' && currentActor.data.id === 'toribii') {
-        const buffEffect = currentActor.data.traces?.talents.find(t => t.id === 'toribii-talent1')?.effects?.[0];
+        const buffEffect = currentActor.data.traces?.talents.find((t: any) => t.id === 'toribii-talent1')?.effects?.[0];
         if (buffEffect) {
           const existingBuff = currentActor.selfBuffs.find(b => b.id === buffEffect.id);
           if (existingBuff) {
@@ -2720,7 +2715,7 @@ export default function Home() {
                       <option value="">Slot {index + 1}</option>
                       {characters.map((char) => (
                         <option key={char.id} value={char.id}>
-                          {!char.isSummonedSpirit && char.name}
+                          {!char.isTargetableSpirit && !char.isUntargetableSpirit && char.name}
                         </option>
                       ))}
                     </select>
@@ -2744,7 +2739,7 @@ export default function Home() {
             </div>
 
             {/* アクティブなキャラクターのビルドエディター */}
-            {selectedCharacterData && !selectedCharacterData.isSummonedSpirit && (
+            {selectedCharacterData && !selectedCharacterData.isTargetableSpirit && !selectedCharacterData.isUntargetableSpirit && (
               <>
                 <div>
                   <div className="mb-4 flex justify-center gap-4">
@@ -2805,7 +2800,7 @@ export default function Home() {
             </div>
 
             {/* 遺物セクション */}
-            {selectedCharacterData && !selectedCharacterData.isSummonedSpirit && (
+            {selectedCharacterData && !selectedCharacterData.isTargetableSpirit && !selectedCharacterData.isUntargetableSpirit && (
               <div className="space-y-4">
                 <h2 className="text-xl font-semibold text-center">ビルド詳細</h2>
 
@@ -3134,7 +3129,7 @@ export default function Home() {
                                   <label htmlFor={`ult-target-${index}`} className="block text-xs font-medium mb-1">必殺技ターゲット</label>
                                   <select id={`ult-target-${index}`} value={slot.ultimateTargetIndex} onChange={e => updatePartySlot(index, { ultimateTargetIndex: Number(e.target.value) })} className="w-full rounded-md dark:bg-gray-800 text-sm">
                                     <option value={-1}>選択...</option>
-                                    {partySlots.filter(p => p.characterId && !characters.find(c => c.id === p.characterId)?.isSummonedSpirit).map((p, i) => {
+                                    {partySlots.filter(p => p.characterId && !characters.find(c => c.id === p.characterId)?.isTargetableSpirit && !characters.find(c => c.id === p.characterId)?.isUntargetableSpirit).map((p, i) => {
                                       const pChar = characters.find(c => c.id === p.characterId);
                                       return pChar ? <option key={i} value={i}>{pChar.name}</option> : null;
                                     })}
